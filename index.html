@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Genetics Informed Image Generation</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #111; 
+            color: white; 
+        }
+        
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .upload-section {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #555;
+            border-radius: 10px;
+            padding: 40px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #222;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #2a2a2a;
+        }
+        
+        .upload-area.dragover {
+            border-color: #007bff;
+            background-color: #333;
+            transform: scale(1.02);
+        }
+        
+        .upload-area p {
+            margin: 10px 0;
+            font-size: 1.2em;
+            color: #ccc;
+        }
+        
+        .status { 
+            padding: 15px 30px; 
+            margin: 20px 0; 
+            border-radius: 10px; 
+            font-weight: bold; 
+            text-align: center;
+            max-width: 600px;
+            font-size: 1.1em;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.loading { background: #fff3cd; color: #856404; }
+        
+        button { 
+            padding: 15px 30px; 
+            margin: 10px; 
+            font-size: 16px; 
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            min-width: 150px;
+        }
+        
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #218838;
+        }
+        
+        .instructions {
+            position: absolute;
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #555;
+            max-width: 400px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            pointer-events: none;
+            top: 20px;
+            right: 20px;
+        }
+        
+        .image-section:hover .instructions {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .image-section {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        
+        .image-container {
+            text-align: center;
+            background: #222;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #555;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .bottom-row {
+            display: flex;
+            gap: 30px;
+            width: 100%;
+        }
+        
+        .bottom-row .image-container {
+            flex: 1;
+            max-width: 50%;
+        }
+        
+        .image-container h3 {
+            margin: 0 0 15px 0;
+            color: #ccc;
+            font-size: 1.2em;
+            font-weight: 400;
+        }
+        
+        canvas {
+            border: 1px solid #555;
+            background: #000;
+            border-radius: 8px;
+            cursor: crosshair;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        #originalCanvas {
+            width: 100%;
+            max-width: 100%;
+        }
+        
+        #croppedCanvas, #resultCanvas {
+            width: 80%;
+            max-width: 400px;
+            height: auto;
+            aspect-ratio: 1;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            background: #28a745;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover:not(:disabled) {
+            background: #218838;
+        }
+        
+        .btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .btn.inference-btn {
+            background: #28a745;
+            font-size: 16px;
+            padding: 15px 30px;
+            font-weight: bold;
+        }
+        
+        .btn.inference-btn:hover:not(:disabled) {
+            background: #218838;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .crop-info {
+            margin-top: 10px;
+            color: #007bff;
+            font-size: 0.9em;
+            min-height: 20px;
+        }
+        
+        .result-info {
+            margin-top: 10px;
+            color: #28a745;
+            font-size: 0.9em;
+            min-height: 20px;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .bottom-row {
+                flex-direction: column;
+            }
+        }
+        
+        /* Selection overlay styles */
+        .selection-overlay {
+            position: absolute;
+            background: rgba(0, 123, 255, 0.1);
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>Genetics Informed Image Generation</h1>
+        
+        <div id="status" class="status loading">Loading WASM model...</div>
+        
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-area" id="uploadArea">
+                <p>Drop an image file here or click to browse</p>
+                <p style="font-size: 0.9em; color: #888;">Supports JPG, PNG, GIF, WebP and more</p>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </div>
+        </div>
+        
+        <div class="instructions" id="instructions">
+            <h4>How to Use</h4>
+            <ol>
+                <li><strong>Select Region:</strong> Click and drag on the image to draw a bounding box around your area of interest</li>
+                <li><strong>Auto-Process:</strong> The selected area will be automatically cropped and converted to 256×256 grayscale</li>
+                <li><strong>Run AI:</strong> Click "Run Inference" to process the cropped image through the neural network</li>
+                <li><strong>View Results:</strong> See the AI-generated output in the result canvas</li>
+            </ol>
+        </div>
+        
+        <div class="image-section hidden" id="canvasContainer">
+            <div class="image-container">
+                <h3>Original Image</h3>
+                <canvas id="originalCanvas"></canvas>
+                <div class="crop-info" id="cropInfo">Draw a selection box to crop</div>
+                <div class="controls">
+                    <button class="btn" id="clearBtn" onclick="app.clearSelection()">
+                        Clear Selection
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bottom-row">
+                <div class="image-container">
+                    <h3>Cropped Image</h3>
+                    <canvas id="croppedCanvas" width="256" height="256"></canvas>
+                    <div class="crop-info" id="croppedInfo">256×256 grayscale ready</div>
+                    <div class="controls">
+                        <button class="btn inference-btn" id="inferenceBtn" onclick="app.runInference()" disabled>
+                            Run Inference
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="image-container">
+                    <h3>AI Result</h3>
+                    <canvas id="resultCanvas" width="256" height="256"></canvas>
+                    <div class="result-info" id="resultInfo">AI output will appear here</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js" type="module"></script>
+</body>
+</html>
